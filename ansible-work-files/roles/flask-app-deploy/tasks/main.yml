@@ -65,7 +65,7 @@
 
 - name: Copy app artifact
   copy:
-    src: "/home/ubuntu/jenkins/workspace/Flask-App/app.tar.gz" # Path from Jenkins
+    src: "{{ artifact_source }}//app.tar.gz" # Path from Jenkins
     dest: /var/www/Flask-App/app.tar.gz
 
 - name: Extract app artifact
