@@ -56,6 +56,16 @@
     owner: devops
     state: present
 
+# New Task: Initialize the database schema (Create tables)
+- name: Initialize database schema and tables
+  become: yes
+  become_user: postgres
+  ansible.builtin.shell: |
+    psql -d devopsdb -f /var/www/my-flask-app/db/init.sql
+  args:
+    chdir: /var/lib/pgsql/
+    creates: /var/lib/pgsql/data/initialized_db_marker # Prevents rerunning on subsequent runs
+
 # Task 3: Copy and Extract the app artifact
 - name: Create app directory
   file:
