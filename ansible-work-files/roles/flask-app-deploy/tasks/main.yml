@@ -130,7 +130,7 @@
 - name: Daemon Reload
   ansible.builtin.systemd:
     daemon_reload: true
-  listen: "Daemon Reload" # <-- Define the listener name
+ # listen: "Daemon Reload" # <-- Define the listener name
 
 # Add a handler to restart gunicorn if the config changes
 - name: Restart Gunicorn
