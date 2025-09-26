@@ -105,8 +105,35 @@
   notify:
     - Restart Gunicorn
 
+# New Task: Create the Gunicorn Systemd service file
+- name: Configure Gunicorn Systemd service
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/gunicorn.service
+    content: |
+      [Unit]
+      Description=Gunicorn instance to serve my-flask-app
+      After=network.target
+
+      [Service]
+      User=root
+      Group=root
+      WorkingDirectory=/var/www/Flask-App/ # Ensure this matches your deployment path
+      EnvironmentFile=/etc/environment
+      ExecStart=/usr/bin/gunicorn --workers 3 --bind 0.0.0.0:5000 app:app
+
+      [Install]
+      WantedBy=multi-user.target
+  notify:
+    - Daemon Reload  # <-- Add a handler notification
+
+# Mandatory Task: Reload Systemd daemon after creating the new service file
+- name: Daemon Reload
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: "Daemon Reload" # <-- Define the listener name
+
 # Add a handler to restart gunicorn if the config changes
 - name: Restart Gunicorn
-  systemd:
+  ansible.builtin.systemd:
     name: gunicorn
     state: restarted
