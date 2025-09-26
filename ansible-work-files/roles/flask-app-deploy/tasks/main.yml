@@ -33,15 +33,19 @@
     state: started
     enabled: yes
 
-- name: Create database and user
+- name: Create database user
   become: yes
   become_user: postgres
   postgresql_user:
     name: devops
     password: 'password'
     state: present
+
+- name: Create PostgreSQL database (devopsdb)
+  become: yes
+  become_user: postgres
   postgresql_db:
-    name: devopsdb
+    name: devopsdb               
     owner: devops
     state: present
 
