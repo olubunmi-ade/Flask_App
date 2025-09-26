@@ -16,6 +16,13 @@
     - flask
     - gunicorn
 
+# New Task: Install psycopg2 Python library
+- name: Install psycopg2 for PostgreSQL connectivity
+  ansible.builtin.pip:
+    name: psycopg2-binary
+    state: present
+    executable: pip3
+
 # Task 2: Install and configure PostgreSQL
 - name: Install PostgreSQL server
   yum:
