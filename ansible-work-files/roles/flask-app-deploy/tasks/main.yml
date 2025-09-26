@@ -66,6 +66,19 @@
     chdir: /var/lib/pgsql/
     creates: /var/lib/pgsql/data/initialized_db_marker # Prevents rerunning on subsequent runs
 
+# New Task: Configure pg_hba.conf for password authentication (md5)
+- name: Configure PostgreSQL to use MD5 password authentication for local connections
+  ansible.builtin.lineinfile:
+    path: /var/lib/pgsql/data/pg_hba.conf
+    regexp: '^host\s+all\s+all\s+127\.0\.0\.1\/32\s+ident$'
+    line: 'host    all             all             127.0.0.1/32            md5' # Changed 'ident' to 'md5'
+    state: present
+    # This also allows IPv6 local connections
+    # regexp: '^host\s+all\s+all\s+::1\/128\s+ident$'
+    # line: 'host    all             all             ::1/128                 md5'
+  notify:
+    - Restart PostgreSQL
+
 # Task 3: Copy and Extract the app artifact
 - name: Create app directory
   file:
@@ -92,6 +105,10 @@
     state: present
 
 
+- name: Restart PostgreSQL
+  ansible.builtin.systemd:
+    name: postgresql
+    state: restarted
 
 
 # New Task: Create the Gunicorn Systemd service file
