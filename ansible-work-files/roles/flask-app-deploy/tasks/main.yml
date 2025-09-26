@@ -117,7 +117,7 @@
       [Service]
       User=root
       Group=root
-      WorkingDirectory=/var/www/Flask-App/ # Ensure this matches your deployment path
+      WorkingDirectory=/var/www/my-flask-app/ # Ensure this matches your deployment path
       EnvironmentFile=/etc/environment
       ExecStart=/usr/bin/gunicorn --workers 3 --bind 0.0.0.0:5000 app:app
 
