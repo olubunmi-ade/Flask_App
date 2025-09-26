@@ -64,8 +64,8 @@
     mode: '0755'
 
 - name: Copy app artifact
-  copy:
-    src: "{{ artifact_source }}//app.tar.gz" # Path from Jenkins
+  ansible.builtin.copy:
+    src: "{{ artifact_source }}/app.tar.gz" # Path from Jenkins
     dest: /var/www/Flask-App/app.tar.gz
 
 - name: Extract app artifact
