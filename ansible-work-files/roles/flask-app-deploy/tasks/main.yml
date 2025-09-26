@@ -65,13 +65,13 @@
 
 - name: Copy app artifact
   copy:
-    src: "{{ jenkins_home }}/workspace/my-flask-app/app.tar.gz" # Path from Jenkins
-    dest: /var/www/my-flask-app/app.tar.gz
+    src: "{{ jenkins_home }}/workspace/Flask-App/app.tar.gz" # Path from Jenkins
+    dest: /var/www/Flask-App/app.tar.gz
 
 - name: Extract app artifact
   unarchive:
-    src: /var/www/my-flask-app/app.tar.gz
-    dest: /var/www/my-flask-app
+    src: /var/www/Flask-App/app.tar.gz
+    dest: /var/www/Flask-App
     remote_src: yes
 
 # Task 4: Configure the app and run it
