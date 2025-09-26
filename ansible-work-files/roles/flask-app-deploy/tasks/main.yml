@@ -76,8 +76,12 @@
     # This also allows IPv6 local connections
     # regexp: '^host\s+all\s+all\s+::1\/128\s+ident$'
     # line: 'host    all             all             ::1/128                 md5'
-  notify:
-    - Restart PostgreSQL
+  notify: Restart PostgreSQL
+
+- name: Restart PostgreSQL
+  ansible.builtin.systemd:
+    name: postgresql
+    state: restarted
 
 # Task 3: Copy and Extract the app artifact
 - name: Create app directory
@@ -105,10 +109,7 @@
     state: present
 
 
-- name: Restart PostgreSQL
-  ansible.builtin.systemd:
-    name: postgresql
-    state: restarted
+
 
 
 # New Task: Create the Gunicorn Systemd service file
