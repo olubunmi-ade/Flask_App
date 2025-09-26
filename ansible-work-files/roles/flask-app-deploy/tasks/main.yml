@@ -98,7 +98,7 @@
       Group=root
       WorkingDirectory=/var/www/my-flask-app/ 
       EnvironmentFile=/etc/environment
-      ExecStart=/usr/bin/gunicorn --workers 3 --bind 0.0.0.0:5000 app:app
+      ExecStart=/usr/local/bin/gunicorn --workers 3 --bind 0.0.0.0:5000 app:app
 
       [Install]
       WantedBy=multi-user.target
