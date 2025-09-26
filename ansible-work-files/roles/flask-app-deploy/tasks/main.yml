@@ -1,0 +1,101 @@
+---
+# Task 1: Install required packages (Python, etc.)
+- name: Ensure Python and Flask are installed
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - python3
+    - python3-pip
+
+- name: Install Flask and gunicorn
+  pip:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - flask
+    - gunicorn
+
+# Task 2: Install and configure PostgreSQL
+- name: Install PostgreSQL server
+  yum:
+    name: postgresql-server
+    state: present
+
+- name: Initialize PostgreSQL database
+  command: postgresql-setup initdb
+  args:
+    creates: /var/lib/pgsql/data/postgresql.conf
+
+- name: Start PostgreSQL service
+  systemd:
+    name: postgresql
+    state: started
+    enabled: yes
+
+- name: Create database and user
+  become: yes
+  become_user: postgres
+  postgresql_user:
+    name: devops
+    password: 'password'
+    state: present
+  postgresql_db:
+    name: devopsdb
+    owner: devops
+    state: present
+
+# Task 3: Copy and Extract the app artifact
+- name: Create app directory
+  file:
+    path: /var/www/my-flask-app
+    state: directory
+    mode: '0755'
+
+- name: Copy app artifact
+  copy:
+    src: "{{ jenkins_home }}/workspace/my-flask-app/app.tar.gz" # Path from Jenkins
+    dest: /var/www/my-flask-app/app.tar.gz
+
+- name: Extract app artifact
+  unarchive:
+    src: /var/www/my-flask-app/app.tar.gz
+    dest: /var/www/my-flask-app
+    remote_src: yes
+
+# Task 4: Configure the app and run it
+- name: Set environment variables
+  lineinfile:
+    path: /etc/environment
+    line: "DATABASE_URL=postgresql://devops:password@localhost/flask_db"
+    state: present
+
+- name: Start Gunicorn service
+  systemd:
+    name: gunicorn
+    state: restarted
+    enabled: yes
+  vars:
+    gunicorn_service_template: |
+      [Unit]
+      Description=Gunicorn instance to serve my-flask-app
+      After=network.target
+
+      [Service]
+      User=root
+      Group=root
+      WorkingDirectory=/var/www/my-flask-app/
+      EnvironmentFile=/etc/environment
+      ExecStart=/usr/bin/gunicorn --workers 3 --bind 0.0.0.0:5000 app:app
+
+      [Install]
+      WantedBy=multi-user.target
+
+  notify:
+    - Restart Gunicorn
+
+# Add a handler to restart gunicorn if the config changes
+- name: Restart Gunicorn
+  systemd:
+    name: gunicorn
+    state: restarted
