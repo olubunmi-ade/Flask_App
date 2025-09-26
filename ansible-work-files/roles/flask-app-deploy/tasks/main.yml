@@ -102,8 +102,7 @@
 
       [Install]
       WantedBy=multi-user.target
-  notify:
-    - Daemon Reload  # <-- Add a handler notification
+  notify: Daemon Reload  # <-- Add a handler notification
 
 - name: 2. Start Gunicorn service
   ansible.builtin.systemd:
@@ -115,6 +114,6 @@
 - name: Daemon Reload
   ansible.builtin.systemd:
     daemon_reload: true
-  listen: "Daemon Reload" # <-- Define the listener name
+  #listen: "Daemon Reload" # <-- Define the listener name
 
 
