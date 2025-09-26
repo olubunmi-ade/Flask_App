@@ -78,7 +78,7 @@
 - name: Set environment variables
   lineinfile:
     path: /etc/environment
-    line: "DATABASE_URL=postgresql://devops:password@localhost/flask_db"
+    line: "DATABASE_URL=postgresql://devops:password@localhost/devopsdb"
     state: present
 
 
