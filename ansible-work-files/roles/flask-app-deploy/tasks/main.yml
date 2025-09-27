@@ -1,6 +1,5 @@
 ---
-- become: yes
-  vars:
+- vars:
     app_dir: /var/www/my-flask-app
     artifact_file: app.tar.gz
     artifact_source: "{{ artifact_source }}"  # Change this to where Jenkins places the artifact
@@ -92,7 +91,7 @@
 
     - name: Extract app artifact
       unarchive:
-        src: "{{ app_dir }}/{{ artifact_file }}"
+        src: "/var/www/my-flask-app/{{ artifact_file }}"
         dest: "{{ app_dir }}"
         remote_src: yes
 
