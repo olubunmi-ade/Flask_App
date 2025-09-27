@@ -5,23 +5,29 @@ import config
 app = Flask(__name__)
 
 def get_users():
-    conn = psycopg2.connect(
-        host=config.DB_HOST,
-        database=config.DB_NAME,
-        user=config.DB_USER,
-        password=config.DB_PASS
-    )
-    cur = conn.cursor()
-    cur.execute("SELECT name FROM users")
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
-    return [row[0] for row in rows]
-
+    try:
+        conn = psycopg2.connect(
+            host=config.DB_HOST,
+            database=config.DB_NAME,
+            user=config.DB_USER,
+            password=config.DB_PASS
+        )
+        cur = conn.cursor()
+        cur.execute("SELECT name FROM users")
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        return [row[0] for row in rows]
+    except psycopg2.Error as e:
+        print(f"DATABASE CONNECTION/QUERY ERROR: {e}")
+        return []
+    except Exception as e:
+        print(f"AN UNEXPECTED ERROR OCCURRED: {e}")
+        return []
 @app.route("/")
 def home():
     users = get_users()
     return render_template("index.html", users=users)
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000)                                     

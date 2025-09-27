@@ -16,6 +16,13 @@
     - flask
     - gunicorn
 
+# New Task: Install psycopg2 Python library
+- name: Install psycopg2 for PostgreSQL connectivity
+  ansible.builtin.pip:
+    name: psycopg2-binary
+    state: present
+    executable: pip3
+
 # Task 2: Install and configure PostgreSQL
 - name: Install PostgreSQL server
   yum:
@@ -33,17 +40,49 @@
     state: started
     enabled: yes
 
-- name: Create database and user
+- name: Create database user
   become: yes
   become_user: postgres
   postgresql_user:
     name: devops
     password: 'password'
     state: present
+
+- name: Create PostgreSQL database (devopsdb)
+  become: yes
+  become_user: postgres
   postgresql_db:
-    name: devopsdb
+    name: devopsdb               
     owner: devops
     state: present
+
+# New Task: Initialize the database schema (Create tables)
+- name: Initialize database schema and tables
+  become: yes
+  become_user: postgres
+  ansible.builtin.shell: |
+    psql -d devopsdb -f /var/www/my-flask-app/db/init.sql
+  args:
+    chdir: /var/lib/pgsql/
+    creates: /var/lib/pgsql/data/initialized_db_marker # Prevents rerunning on subsequent runs
+
+# New Task: Configure pg_hba.conf for password authentication (md5)
+- name: Configure PostgreSQL to use MD5 password authentication for local connections
+  ansible.builtin.lineinfile:
+    path: /var/lib/pgsql/data/pg_hba.conf
+    regexp: '^host\s+all\s+all\s+127\.0\.0\.1/32\s+.*$'
+    line: 'host    all             all             127.0.0.1/32            md5' # Changed 'ident' to 'md5'
+    state: present
+    # This also allows IPv6 local connections
+    regexp: '^host\s+all\s+all\s+::1\/128\s+.*$'
+    line: 'host    all             all             ::1/128                 md5'
+  notify: Restart PostgreSQL
+
+
+- name: Restart PostgreSQL
+  ansible.builtin.systemd:
+    name: postgresql
+    state: restarted
 
 # Task 3: Copy and Extract the app artifact
 - name: Create app directory
@@ -53,8 +92,8 @@
     mode: '0755'
 
 - name: Copy app artifact
-  copy:
-    src: "{{ jenkins_home }}/workspace/my-flask-app/app.tar.gz" # Path from Jenkins
+  ansible.builtin.copy:
+    src: "{{ artifact_source }}/app.tar.gz" # Path from Jenkins
     dest: /var/www/my-flask-app/app.tar.gz
 
 - name: Extract app artifact
@@ -67,16 +106,18 @@
 - name: Set environment variables
   lineinfile:
     path: /etc/environment
-    line: "DATABASE_URL=postgresql://devops:password@localhost/flask_db"
+    line: "DATABASE_URL=postgresql://devops:password@localhost/devopsdb"
     state: present
 
-- name: Start Gunicorn service
-  systemd:
-    name: gunicorn
-    state: restarted
-    enabled: yes
-  vars:
-    gunicorn_service_template: |
+
+
+
+
+# New Task: Create the Gunicorn Systemd service file
+- name: Configure Gunicorn Systemd service
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/gunicorn.service
+    content: |
       [Unit]
       Description=Gunicorn instance to serve my-flask-app
       After=network.target
@@ -84,18 +125,24 @@
       [Service]
       User=root
       Group=root
-      WorkingDirectory=/var/www/my-flask-app/
+      WorkingDirectory=/var/www/my-flask-app/ 
       EnvironmentFile=/etc/environment
-      ExecStart=/usr/bin/gunicorn --workers 3 --bind 0.0.0.0:5000 app:app
+      ExecStart=/usr/local/bin/gunicorn --workers 3 --bind 0.0.0.0:5000 app:app
 
       [Install]
       WantedBy=multi-user.target
+  #notify: Daemon Reload  # <-- Add a handler notification
 
-  notify:
-    - Restart Gunicorn
-
-# Add a handler to restart gunicorn if the config changes
-- name: Restart Gunicorn
-  systemd:
+- name: 2. Start Gunicorn service
+  ansible.builtin.systemd:
     name: gunicorn
-    state: restarted
+    state: started # Ensures it is running
+    enabled: yes   # Ensures it starts on boot
+
+# Mandatory Task: Reload Systemd daemon after creating the new service file
+- name: Daemon Reload
+  ansible.builtin.systemd:
+    daemon_reload: true
+  #listen: "Daemon Reload" # <-- Define the listener name
+
+
