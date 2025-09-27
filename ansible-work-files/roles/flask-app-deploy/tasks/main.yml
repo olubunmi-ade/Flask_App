@@ -79,7 +79,7 @@
   notify: Restart PostgreSQL
 
 - name: Configure pg_hba.conf IPv6
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /var/lib/pgsql/data/pg_hba.conf
     regexp: '^host\s+all\s+all\s+::1/128\s+.*$'
     line: 'host    all             all             ::1/128                 md5'
