@@ -84,7 +84,7 @@
     regexp: '^host\s+all\s+all\s+::1/128\s+.*$'
     line: 'host    all             all             ::1/128                 md5'
     state: present
-    notify: Restart PostgreSQL
+  notify: Restart PostgreSQL
 
 - name: Restart PostgreSQL
   ansible.builtin.systemd:
