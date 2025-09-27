@@ -1,6 +1,5 @@
 ---
-- hosts: web_servers
-  become: yes
+- become: yes
   vars:
     app_dir: /var/www/my-flask-app
     artifact_file: app.tar.gz
