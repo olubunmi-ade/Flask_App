@@ -7,4 +7,4 @@ CREATE TABLE users (
     name VARCHAR(50)
 );
 
-INSERT INTO users (name) VALUES ('Olubunmi'), ('Bob'), ('Charlie');
+INSERT INTO users (name) VALUES ('Olubunmi'), ('Anita'), ('Hakeem');
