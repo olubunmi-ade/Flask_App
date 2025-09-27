@@ -1,147 +1,154 @@
 ---
-# Task 1: Install required packages (Python, etc.)
-- name: Ensure Python and Flask are installed
-  yum:
-    name: "{{ item }}"
-    state: present
-  with_items:
-    - python3
-    - python3-pip
+- vars:
+    app_dir: /var/www/my-flask-app
+    artifact_file: app.tar.gz
+    artifact_source: "{{ artifact_source }}"  # Change this to where Jenkins places the artifact
+    db_name: devopsdb
+    db_user: devops
+    db_password: "{{ db_password }}"   # Use ansible-vault or inventory var
+    db_host: localhost
+    db_port: 5432
+    db_url: "postgresql://{{ db_user }}:{{ db_password }}@{{ db_host }}/{{ db_name }}"
 
-- name: Install Flask and gunicorn
-  pip:
-    name: "{{ item }}"
-    state: present
-  with_items:
-    - flask
-    - gunicorn
+  tasks:
+    # ----------------------------
+    # Task 1: Python & dependencies
+    # ----------------------------
+    - name: Ensure Python3 and pip installed
+      yum:
+        name: 
+          - python3
+          - python3-pip
+        state: present
 
-# New Task: Install psycopg2 Python library
-- name: Install psycopg2 for PostgreSQL connectivity
-  ansible.builtin.pip:
-    name: psycopg2-binary
-    state: present
-    executable: pip3
+    - name: Install Flask and Gunicorn
+      pip:
+        name: 
+          - flask
+          - gunicorn
+        state: present
+        executable: pip3
 
-# Task 2: Install and configure PostgreSQL
-- name: Install PostgreSQL server
-  yum:
-    name: postgresql-server
-    state: present
+    - name: Install psycopg2 for PostgreSQL connectivity
+      pip:
+        name: psycopg2-binary
+        state: present
+        executable: pip3
 
-- name: Initialize PostgreSQL database
-  command: postgresql-setup initdb
-  args:
-    creates: /var/lib/pgsql/data/postgresql.conf
+    # ----------------------------
+    # Task 2: PostgreSQL setup
+    # ----------------------------
+    - name: Install PostgreSQL server
+      yum:
+        name: postgresql-server
+        state: present
 
-- name: Start PostgreSQL service
-  systemd:
-    name: postgresql
-    state: started
-    enabled: yes
+    - name: Initialize PostgreSQL database
+      command: postgresql-setup initdb
+      args:
+        creates: /var/lib/pgsql/data/postgresql.conf
 
-- name: Create database user
-  become: yes
-  become_user: postgres
-  postgresql_user:
-    name: devops
-    password: 'password'
-    state: present
+    - name: Ensure PostgreSQL is running
+      systemd:
+        name: postgresql
+        state: started
+        enabled: yes
 
-- name: Create PostgreSQL database (devopsdb)
-  become: yes
-  become_user: postgres
-  postgresql_db:
-    name: devopsdb               
-    owner: devops
-    state: present
+    - name: Create database user
+      become_user: postgres
+      postgresql_user:
+        name: "{{ db_user }}"
+        password: "{{ db_password }}"
+        state: present
 
-# New Task: Initialize the database schema (Create tables)
-- name: Initialize database schema and tables
-  become: yes
-  become_user: postgres
-  ansible.builtin.shell: |
-    psql -d devopsdb -f /var/www/my-flask-app/db/init.sql
-  args:
-    chdir: /var/lib/pgsql/
-    creates: /var/lib/pgsql/data/initialized_db_marker # Prevents rerunning on subsequent runs
+    - name: Create PostgreSQL database
+      become_user: postgres
+      postgresql_db:
+        name: "{{ db_name }}"
+        owner: "{{ db_user }}"
+        state: present
 
-# New Task: Configure pg_hba.conf for password authentication (md5)
-- name: Configure PostgreSQL to use MD5 password authentication for local connections
-  ansible.builtin.lineinfile:
-    path: /var/lib/pgsql/data/pg_hba.conf
-    regexp: '^host\s+all\s+all\s+127\.0\.0\.1\/32\s+ident$'
-    line: 'host    all             all             127.0.0.1/32            md5' # Changed 'ident' to 'md5'
-    state: present
-    # This also allows IPv6 local connections
-    # regexp: '^host\s+all\s+all\s+::1\/128\s+ident$'
-    # line: 'host    all             all             ::1/128                 md5'
-  notify: Restart PostgreSQL
+    - name: Configure PostgreSQL to use MD5 password authentication
+      lineinfile:
+        path: /var/lib/pgsql/data/pg_hba.conf
+        regexp: '^host\s+all\s+all\s+127\.0\.0\.1/32\s+.*$'
+        line: 'host    all             all             127.0.0.1/32            md5'
+      notify: Restart PostgreSQL
 
-- name: Restart PostgreSQL
-  ansible.builtin.systemd:
-    name: postgresql
-    state: restarted
+    # ----------------------------
+    # Task 3: App setup
+    # ----------------------------
+    - name: Create app directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        mode: '0755'
 
-# Task 3: Copy and Extract the app artifact
-- name: Create app directory
-  file:
-    path: /var/www/my-flask-app
-    state: directory
-    mode: '0755'
+    - name: Copy app artifact
+      copy:
+        src: "{{ artifact_source }}/{{ artifact_file }}"
+        dest: "{{ app_dir }}/{{ artifact_file }}"
 
-- name: Copy app artifact
-  ansible.builtin.copy:
-    src: "{{ artifact_source }}/app.tar.gz" # Path from Jenkins
-    dest: /var/www/my-flask-app/app.tar.gz
+    - name: Extract app artifact
+      unarchive:
+        src: "/var/www/my-flask-app/{{ artifact_file }}"
+        dest: "{{ app_dir }}"
+        remote_src: yes
 
-- name: Extract app artifact
-  unarchive:
-    src: /var/www/my-flask-app/app.tar.gz
-    dest: /var/www/my-flask-app
-    remote_src: yes
+    - name: Initialize database schema
+      become_user: postgres
+      shell: psql -d {{ db_name }} -f {{ app_dir }}/db/init.sql
+      args:
+        creates: /var/lib/pgsql/data/initialized_db_marker
+      register: schema_init
+      changed_when: schema_init.rc == 0
 
-# Task 4: Configure the app and run it
-- name: Set environment variables
-  lineinfile:
-    path: /etc/environment
-    line: "DATABASE_URL=postgresql://devops:password@localhost/devopsdb"
-    state: present
+    - name: Create initialized marker
+      file:
+        path: /var/lib/pgsql/data/initialized_db_marker
+        state: touch
+      when: schema_init is changed
 
+    - name: Set DATABASE_URL environment variable
+      lineinfile:
+        path: /etc/environment
+        line: "DATABASE_URL={{ db_url }}"
+        state: present
 
+    # ----------------------------
+    # Task 4: Gunicorn service
+    # ----------------------------
+    - name: Configure Gunicorn Systemd service
+      copy:
+        dest: /etc/systemd/system/gunicorn.service
+        content: |
+          [Unit]
+          Description=Gunicorn instance to serve my-flask-app
+          After=network.target
 
+          [Service]
+          User=root
+          Group=root
+          WorkingDirectory={{ app_dir }}
+          EnvironmentFile=/etc/environment
+          ExecStart=/usr/local/bin/gunicorn --workers 3 --bind 0.0.0.0:5000 app:app
 
+          [Install]
+          WantedBy=multi-user.target
+      notify: Daemon Reload
 
-# New Task: Create the Gunicorn Systemd service file
-- name: Configure Gunicorn Systemd service
-  ansible.builtin.copy:
-    dest: /etc/systemd/system/gunicorn.service
-    content: |
-      [Unit]
-      Description=Gunicorn instance to serve my-flask-app
-      After=network.target
+    - name: Start and enable Gunicorn
+      systemd:
+        name: gunicorn
+        state: started
+        enabled: yes
 
-      [Service]
-      User=root
-      Group=root
-      WorkingDirectory=/var/www/my-flask-app/ 
-      EnvironmentFile=/etc/environment
-      ExecStart=/usr/local/bin/gunicorn --workers 3 --bind 0.0.0.0:5000 app:app
+  handlers:
+    - name: Restart PostgreSQL
+      systemd:
+        name: postgresql
+        state: restarted
 
-      [Install]
-      WantedBy=multi-user.target
-  #notify: Daemon Reload  # <-- Add a handler notification
-
-- name: 2. Start Gunicorn service
-  ansible.builtin.systemd:
-    name: gunicorn
-    state: started # Ensures it is running
-    enabled: yes   # Ensures it starts on boot
-
-# Mandatory Task: Reload Systemd daemon after creating the new service file
-- name: Daemon Reload
-  ansible.builtin.systemd:
-    daemon_reload: true
-  #listen: "Daemon Reload" # <-- Define the listener name
-
-
+    - name: Daemon Reload
+      systemd:
+        daemon_reload: true
