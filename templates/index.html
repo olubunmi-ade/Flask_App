@@ -1,15 +1,49 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>DevOps Students</title>
+    <meta charset="UTF-8">
+    <title>DevOps Success</title>
+    <style>
+        /* CSS for centering the image and styling the users box */
+        body {
+            text-align: center; /* Center all block content */
+            font-family: Arial, sans-serif;
+            padding-top: 20px;
+        }
+        .image-container {
+            margin: 20px 0; /* Space above and below the image */
+        }
+        .users-box {
+            width: 80%; /* Box takes up 80% of the page width */
+            max-width: 600px; /* Maximum width for larger screens */
+            margin: 30px auto; /* Center the box horizontally */
+            padding: 20px;
+            border: 2px solid #007bff; /* A nice blue border */
+            border-radius: 10px; /* Rounded corners */
+            text-align: left; /* Align text inside the box to the left */
+        }
+        .users-box ul {
+            list-style-type: none; /* Remove bullet points */
+            padding: 0;
+        }
+    </style>
 </head>
 <body>
-  <h1>I am almost a DevOps Engineer!! </h1>
-  <h2>Current Users:</h2>
-  <ul>
-    {% for user in users %}
-      <li>{{ user }}</li>
-    {% endfor %}
-  </ul>
+
+    <h2><b>We are almost DevOp Engineers!!</b></h2>
+
+    <h4>Thank you CeeyIT Solutions!</h4>
+
+    <div class="users-box">
+        <h3>Current Registered Users:</h3>
+        
+        <p>The last 6 names entered:</p>
+        <ul>
+            {% for user in users %}
+                <li>{{ user }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
 </body>
 </html>
