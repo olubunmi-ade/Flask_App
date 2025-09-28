@@ -13,7 +13,7 @@ def get_users():
             password=config.DB_PASS
         )
         cur = conn.cursor()
-        cur.execute("SELECT name FROM users ORDER BY id DESC LIMIT 6")
+        cur.execute("SELECT name FROM users ORDER BY id DESC LIMIT 3")
         rows = cur.fetchall()
         cur.close()
         conn.close()
