@@ -7,4 +7,4 @@ CREATE TABLE users (
     name VARCHAR(50)
 );
 
-INSERT INTO users (name) VALUES ('1. Ansible'), ('2. Jenkins'), ('3. Python');
+INSERT INTO users (name) VALUES ('1. Olubunmi'), ('2. Hakeem'), ('3. Anita');
